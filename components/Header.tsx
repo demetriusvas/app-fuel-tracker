@@ -22,6 +22,18 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, isLoggedIn, 
                         </span>
                     </div>
                     <div className="flex items-center gap-4">
+                        {/* Show history link first only if logged in */}
+                        {isLoggedIn && (
+                            <button
+                                onClick={onNavigateToHistory}
+                                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-cyan-400 transition-colors duration-300"
+                                aria-label="Ver histórico"
+                            >
+                                Histórico
+                            </button>
+                        )}
+
+                        {/* Theme toggle is always present */}
                         <button
                             onClick={toggleTheme}
                             className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900"
@@ -30,23 +42,15 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, isLoggedIn, 
                             {theme === 'light' ? <Moon className="h-6 w-6" /> : <Sun className="h-6 w-6" />}
                         </button>
                         
+                        {/* Show logout or login button */}
                         {isLoggedIn ? (
-                            <>
-                                <button
-                                    onClick={onNavigateToHistory}
-                                    className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-cyan-400 transition-colors duration-300"
-                                    aria-label="Ver histórico"
-                                >
-                                    Histórico
-                                </button>
-                                 <button
-                                    onClick={onLogout}
-                                    className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900"
-                                    aria-label="Logout"
-                                >
-                                    <LogOut className="h-6 w-6" />
-                                </button>
-                            </>
+                            <button
+                                onClick={onLogout}
+                                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900"
+                                aria-label="Logout"
+                            >
+                                <LogOut className="h-6 w-6" />
+                            </button>
                         ) : (
                              <button
                                 onClick={onNavigateToLogin}
