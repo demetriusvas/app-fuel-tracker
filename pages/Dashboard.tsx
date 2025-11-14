@@ -188,13 +188,10 @@ export const Dashboard: React.FC = () => {
                 <div className="lg:col-span-1">
                     <FuelingForm onAddFueling={handleAddFueling} lastOdometer={sortedFuelingsForDisplay[0]?.odometer ?? 0} />
                 </div>
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
                     <ConsumptionChart data={sortedFuelingsForDisplay} />
+                    <MonthlySpendChart data={fuelings} />
                 </div>
-            </div>
-
-            <div className="mb-12">
-                <MonthlySpendChart data={fuelings} />
             </div>
 
             <FuelingHistory fuelings={sortedFuelingsForDisplay} onDeleteFueling={handleDeleteFueling} onEditFueling={setEditingFueling} />
