@@ -10,17 +10,30 @@ import { User } from 'firebase/auth';
 import { MonthlySpendChart } from '../components/MonthlySpendChart';
 
 const recalculateConsumptions = (fuelings: FuelingEntry[]): FuelingEntry[] => {
+    // Sort by odometer to ensure correct chronological order
     const sorted = [...fuelings].sort((a, b) => a.odometer - b.odometer);
+
+    // The consumption for a given fill-up (entry `i`) can only be calculated 
+    // after the next fill-up (entry `i+1`).
     return sorted.map((current, index) => {
-        if (index === 0) {
+        const next = sorted[index + 1];
+
+        // If there's no next entry, we're at the most recent fill-up.
+        // Consumption can't be calculated yet.
+        if (!next) {
             return { ...current, consumption: null };
         }
-        const previous = sorted[index - 1];
-        const distance = current.odometer - previous.odometer;
+
+        // Distance traveled on the fuel from the 'current' fill-up.
+        const distance = next.odometer - current.odometer;
+        // Fuel used was the amount from the 'current' fill-up.
         const liters = current.liters;
+
         if (liters > 0 && distance > 0) {
             return { ...current, consumption: distance / liters };
         }
+
+        // If data is invalid (e.g., negative distance), consumption is null.
         return { ...current, consumption: null };
     });
 };
@@ -65,10 +78,13 @@ export const Dashboard: React.FC = () => {
     }, [currentUser]);
 
     const handleBatchUpdate = async (updatedFuelings: FuelingEntry[]) => {
+        if (updatedFuelings.length === 0) return;
         const batch = writeBatch(db);
         updatedFuelings.forEach(f => {
-            const docRef = doc(db, "fuelings", f.id);
-            batch.update(docRef, { consumption: f.consumption });
+            if (f.id) { // Ensure there is an id
+                const docRef = doc(db, "fuelings", f.id);
+                batch.update(docRef, { consumption: f.consumption });
+            }
         });
         await batch.commit();
     };
@@ -80,25 +96,17 @@ export const Dashboard: React.FC = () => {
             ...data,
             userId: currentUser.uid,
             liters: data.totalCost / data.pricePerLiter,
-            consumption: null, // Será recalculado
+            consumption: null, // Consumption is always null on creation now
         };
         
-        const tempFuelings = [...fuelings, { ...newEntryRaw, id: 'temp' }];
-        const recalculated = recalculateConsumptions(tempFuelings);
-        
-        const newEntryWithConsumption = recalculated.find(f => f.id === 'temp');
+        // Add the new document to Firestore first to get its ID
+        const docRef = await addDoc(collection(db, "fuelings"), newEntryRaw);
 
-        const docRef = await addDoc(collection(db, "fuelings"), {
-            ...newEntryRaw,
-            consumption: newEntryWithConsumption?.consumption ?? null,
-        });
+        // After adding, we need to recalculate and potentially update the consumption
+        // of the PREVIOUS entry. The `onSnapshot` listener will handle this by
+        // re-fetching and re-calculating the entire list, which is simpler and safer.
 
-        // Após adicionar, precisamos recalcular e atualizar o abastecimento seguinte, se houver.
-        const allFuelingsAfterAdd = [...fuelings, { ...newEntryRaw, id: docRef.id, consumption: newEntryWithConsumption?.consumption ?? null }];
-        const finalRecalculatedList = recalculateConsumptions(allFuelingsAfterAdd);
-        await handleBatchUpdate(finalRecalculatedList);
-
-    }, [fuelings, currentUser]);
+    }, [currentUser]);
 
 
     const stats = useMemo(() => {
