@@ -1,14 +1,15 @@
 
 import React from 'react';
 import type { FuelingEntry } from '../types';
-import { Trash2, Calendar, Gauge, Droplet, DollarSign, MapPin } from 'lucide-react';
+import { Trash2, Edit } from 'lucide-react';
 
 interface FuelingHistoryProps {
     fuelings: FuelingEntry[];
     onDeleteFueling: (id: string) => void;
+    onEditFueling: (fueling: FuelingEntry) => void;
 }
 
-export const FuelingHistory: React.FC<FuelingHistoryProps> = ({ fuelings, onDeleteFueling }) => {
+export const FuelingHistory: React.FC<FuelingHistoryProps> = ({ fuelings, onDeleteFueling, onEditFueling }) => {
     return (
         <div className="p-4 sm:p-6 bg-white/80 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
             <h2 className="text-xl font-bold mb-4">Histórico de Abastecimentos</h2>
@@ -43,7 +44,10 @@ export const FuelingHistory: React.FC<FuelingHistoryProps> = ({ fuelings, onDele
                                     }
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300 hidden md:table-cell">{f.station || '-'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex items-center justify-end gap-2">
+                                    <button onClick={() => onEditFueling(f)} className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 p-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50 transition">
+                                        <Edit size={18} />
+                                    </button>
                                     <button onClick={() => onDeleteFueling(f.id)} className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition">
                                         <Trash2 size={18} />
                                     </button>

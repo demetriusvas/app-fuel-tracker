@@ -1,6 +1,7 @@
 
 export interface FuelingEntry {
   id: string;
+  userId: string;
   date: string;
   odometer: number;
   pricePerLiter: number;
@@ -10,4 +11,6 @@ export interface FuelingEntry {
   consumption: number | null;
 }
 
-export type NewFuelingData = Omit<FuelingEntry, 'id' | 'liters' | 'consumption'>;
+export type NewFuelingData = Omit<FuelingEntry, 'id' | 'userId' | 'liters' | 'consumption'>;
+
+export type EditableFuelingData = Omit<FuelingEntry, 'userId' | 'liters' | 'consumption'>;
