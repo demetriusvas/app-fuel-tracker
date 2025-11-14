@@ -1,0 +1,5 @@
+{
+  "name": "Fuel Tracker",
+  "description": "A modern web application to track and analyze your vehicle's fuel consumption and costs.",
+  "requestFramePermissions": []
+}
