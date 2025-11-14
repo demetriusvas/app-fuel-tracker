@@ -9,6 +9,7 @@ import { auth, db } from '../firebase';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { EditFuelingModal } from '../components/EditFuelingModal';
 import { User } from 'firebase/auth';
+import { MonthlySpendChart } from '../components/MonthlySpendChart';
 
 const recalculateConsumptions = (fuelings: FuelingEntry[]): FuelingEntry[] => {
     const sorted = [...fuelings].sort((a, b) => a.odometer - b.odometer);
@@ -190,6 +191,10 @@ export const Dashboard: React.FC = () => {
                 <div className="lg:col-span-2">
                     <ConsumptionChart data={sortedFuelingsForDisplay} />
                 </div>
+            </div>
+
+            <div className="mb-12">
+                <MonthlySpendChart data={fuelings} />
             </div>
 
             <FuelingHistory fuelings={sortedFuelingsForDisplay} onDeleteFueling={handleDeleteFueling} onEditFueling={setEditingFueling} />
