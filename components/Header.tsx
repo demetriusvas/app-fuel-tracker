@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Fuel, LogOut, LogIn, History } from 'lucide-react';
+import { Sun, Moon, Fuel, LogOut, LogIn } from 'lucide-react';
 
 interface HeaderProps {
     theme: 'light' | 'dark';
@@ -34,10 +34,10 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, isLoggedIn, 
                             <>
                                 <button
                                     onClick={onNavigateToHistory}
-                                    className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900"
+                                    className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-cyan-400 transition-colors duration-300"
                                     aria-label="Ver histórico"
                                 >
-                                    <History className="h-6 w-6" />
+                                    Histórico
                                 </button>
                                  <button
                                     onClick={onLogout}
