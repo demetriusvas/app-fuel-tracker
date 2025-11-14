@@ -5,11 +5,23 @@ import { Footer } from './components/Footer';
 import { LandingPage } from './pages/LandingPage';
 import { Dashboard } from './pages/Dashboard';
 import { LoginPage } from './pages/LoginPage';
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
     const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'dark');
-    const [isLoggedIn, setIsLoggedIn] = useLocalStorage<boolean>('isLoggedIn', false);
+    const [user, setUser] = React.useState<User | null>(null);
+    const [loadingAuth, setLoadingAuth] = React.useState(true);
     const [showLogin, setShowLogin] = React.useState(false);
+
+    React.useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            setLoadingAuth(false);
+        });
+        return () => unsubscribe();
+    }, []);
 
     const toggleTheme = React.useCallback(() => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -24,22 +36,25 @@ const App: React.FC = () => {
     const handleNavigateToLogin = () => setShowLogin(true);
     const handleBackToLanding = () => setShowLogin(false);
     
-    const handleLogin = () => {
-        setIsLoggedIn(true);
-        setShowLogin(false);
+    const handleLogout = async () => {
+        await signOut(auth);
+        setShowLogin(false); // Go back to landing page after logout
     };
 
-    const handleLogout = () => {
-        setIsLoggedIn(false);
-        setShowLogin(false);
-    };
+    if (loadingAuth) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+                <Loader2 className="animate-spin h-12 w-12 text-emerald-500" />
+            </div>
+        );
+    }
 
     const renderContent = () => {
-        if (isLoggedIn) {
+        if (user) {
             return <Dashboard />;
         }
         if (showLogin) {
-            return <LoginPage onLogin={handleLogin} onBack={handleBackToLanding} />;
+            return <LoginPage onBack={handleBackToLanding} />;
         }
         return <LandingPage onNavigateToLogin={handleNavigateToLogin} />;
     };
@@ -49,7 +64,7 @@ const App: React.FC = () => {
             <Header 
                 theme={theme} 
                 toggleTheme={toggleTheme} 
-                isLoggedIn={isLoggedIn}
+                isLoggedIn={!!user}
                 onLogout={handleLogout}
                 onNavigateToLogin={handleNavigateToLogin}
             />
