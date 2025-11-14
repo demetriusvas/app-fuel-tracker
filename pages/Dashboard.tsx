@@ -1,13 +1,11 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import type { FuelingEntry, NewFuelingData, EditableFuelingData } from '../types';
+import type { FuelingEntry, NewFuelingData } from '../types';
 import { StatsCard } from '../components/StatsCard';
 import { FuelingForm } from '../components/FuelingForm';
-import { FuelingHistory } from '../components/FuelingHistory';
 import { ConsumptionChart } from '../components/ConsumptionChart';
 import { Droplet, Gauge, DollarSign, Route, Loader2 } from 'lucide-react';
 import { auth, db } from '../firebase';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
-import { EditFuelingModal } from '../components/EditFuelingModal';
+import { collection, query, where, onSnapshot, addDoc, doc, writeBatch } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { MonthlySpendChart } from '../components/MonthlySpendChart';
 
@@ -31,7 +29,6 @@ export const Dashboard: React.FC = () => {
     const [fuelings, setFuelings] = useState<FuelingEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
-    const [editingFueling, setEditingFueling] = useState<FuelingEntry | null>(null);
 
     useEffect(() => {
         const unsubscribeAuth = auth.onAuthStateChanged(user => {
@@ -103,36 +100,6 @@ export const Dashboard: React.FC = () => {
 
     }, [fuelings, currentUser]);
 
-    const handleDeleteFueling = useCallback(async (id: string) => {
-        await deleteDoc(doc(db, "fuelings", id));
-        // A remoção irá acionar o onSnapshot, que recalculará tudo.
-    }, []);
-    
-    const handleUpdateFueling = useCallback(async (updatedData: EditableFuelingData) => {
-        const docRef = doc(db, "fuelings", updatedData.id);
-        const batch = writeBatch(db);
-        
-        const updatedEntry = {
-            ...updatedData,
-            liters: updatedData.totalCost / updatedData.pricePerLiter,
-        };
-
-        batch.update(docRef, updatedEntry);
-        
-        // Recalcular toda a lista com o dado atualizado
-        const otherFuelings = fuelings.filter(f => f.id !== updatedData.id);
-        const fullListWithUpdate = [...otherFuelings, { ...fuelings.find(f=>f.id === updatedData.id)!, ...updatedEntry }];
-        const recalculated = recalculateConsumptions(fullListWithUpdate);
-
-        recalculated.forEach(f => {
-             const ref = doc(db, "fuelings", f.id);
-             batch.update(ref, { consumption: f.consumption });
-        });
-        
-        await batch.commit();
-        setEditingFueling(null);
-    }, [fuelings]);
-
 
     const stats = useMemo(() => {
         const sorted = [...fuelings].sort((a, b) => a.odometer - b.odometer);
@@ -165,18 +132,6 @@ export const Dashboard: React.FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            {editingFueling && (
-                <EditFuelingModal 
-                    fueling={editingFueling}
-                    onClose={() => setEditingFueling(null)}
-                    onSave={handleUpdateFueling}
-                    lastOdometer={
-                        sortedFuelingsForDisplay
-                            .filter(f => f.id !== editingFueling.id && f.odometer < editingFueling.odometer)
-                            .sort((a, b) => b.odometer - a.odometer)[0]?.odometer ?? 0
-                    }
-                />
-            )}
             <section id="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                 <StatsCard icon={<Gauge />} label="Consumo Médio" value={stats.avgConsumption.toFixed(2)} unit="km/l" />
                 <StatsCard icon={<DollarSign />} label="Total Gasto" value={stats.totalSpent.toFixed(2)} unit="R$" />
@@ -193,8 +148,6 @@ export const Dashboard: React.FC = () => {
                     <MonthlySpendChart data={fuelings} />
                 </div>
             </div>
-
-            <FuelingHistory fuelings={sortedFuelingsForDisplay} onDeleteFueling={handleDeleteFueling} onEditFueling={setEditingFueling} />
         </div>
     );
 };

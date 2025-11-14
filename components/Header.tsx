@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Fuel, LogOut, LogIn } from 'lucide-react';
+import { Sun, Moon, Fuel, LogOut, LogIn, History } from 'lucide-react';
 
 interface HeaderProps {
     theme: 'light' | 'dark';
@@ -7,9 +7,10 @@ interface HeaderProps {
     isLoggedIn: boolean;
     onLogout: () => void;
     onNavigateToLogin: () => void;
+    onNavigateToHistory: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, isLoggedIn, onLogout, onNavigateToLogin }) => {
+export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, isLoggedIn, onLogout, onNavigateToLogin, onNavigateToHistory }) => {
     return (
         <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -30,13 +31,22 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, isLoggedIn, 
                         </button>
                         
                         {isLoggedIn ? (
-                             <button
-                                onClick={onLogout}
-                                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900"
-                                aria-label="Logout"
-                            >
-                                <LogOut className="h-6 w-6" />
-                            </button>
+                            <>
+                                <button
+                                    onClick={onNavigateToHistory}
+                                    className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900"
+                                    aria-label="Ver histórico"
+                                >
+                                    <History className="h-6 w-6" />
+                                </button>
+                                 <button
+                                    onClick={onLogout}
+                                    className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-900"
+                                    aria-label="Logout"
+                                >
+                                    <LogOut className="h-6 w-6" />
+                                </button>
+                            </>
                         ) : (
                              <button
                                 onClick={onNavigateToLogin}

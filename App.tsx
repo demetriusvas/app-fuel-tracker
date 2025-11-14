@@ -8,22 +8,30 @@ import { LoginPage } from './pages/LoginPage';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
+import { HistoryPage } from './pages/HistoryPage';
+
+type View = 'landing' | 'login' | 'dashboard' | 'history';
 
 const App: React.FC = () => {
     const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'dark');
     const [user, setUser] = React.useState<User | null>(null);
     const [loadingAuth, setLoadingAuth] = React.useState(true);
-    const [showLogin, setShowLogin] = React.useState(false);
+    const [view, setView] = React.useState<View>('landing');
 
     React.useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
+            if (currentUser) {
+                setView('dashboard');
+            } else {
+                setView('landing');
+            }
             setLoadingAuth(false);
         });
         return () => unsubscribe();
     }, []);
 
-    const toggleTheme = React.useCallback(() => {
+    const toggleTheme = React. useCallback(() => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
         setTheme(newTheme);
         document.documentElement.classList.toggle('dark', newTheme === 'dark');
@@ -33,12 +41,14 @@ const App: React.FC = () => {
         document.documentElement.classList.toggle('dark', theme === 'dark');
     }, [theme]);
 
-    const handleNavigateToLogin = () => setShowLogin(true);
-    const handleBackToLanding = () => setShowLogin(false);
+    const handleNavigateToLogin = () => setView('login');
+    const handleBackToLanding = () => setView('landing');
+    const handleNavigateToHistory = () => setView('history');
+    const handleNavigateToDashboard = () => setView('dashboard');
     
     const handleLogout = async () => {
         await signOut(auth);
-        setShowLogin(false); // Go back to landing page after logout
+        setView('landing');
     };
 
     if (loadingAuth) {
@@ -51,9 +61,16 @@ const App: React.FC = () => {
 
     const renderContent = () => {
         if (user) {
-            return <Dashboard />;
+            switch(view) {
+                case 'dashboard':
+                    return <Dashboard />;
+                case 'history':
+                    return <HistoryPage onNavigateToDashboard={handleNavigateToDashboard} />;
+                default:
+                    return <Dashboard />; // Default to dashboard if logged in
+            }
         }
-        if (showLogin) {
+        if (view === 'login') {
             return <LoginPage onBack={handleBackToLanding} />;
         }
         return <LandingPage onNavigateToLogin={handleNavigateToLogin} />;
@@ -67,6 +84,7 @@ const App: React.FC = () => {
                 isLoggedIn={!!user}
                 onLogout={handleLogout}
                 onNavigateToLogin={handleNavigateToLogin}
+                onNavigateToHistory={handleNavigateToHistory}
             />
             <main className="flex-grow w-full">
                 {renderContent()}
