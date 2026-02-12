@@ -1,49 +1,29 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import type { FuelingEntry, EditableFuelingData } from '../types';
 import { FuelingHistory } from '../components/FuelingHistory';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { collection, query, where, onSnapshot, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { EditFuelingModal } from '../components/EditFuelingModal';
 import { User } from 'firebase/auth';
 
-interface HistoryPageProps {
-    onNavigateToDashboard: () => void;
-}
-
 const recalculateConsumptions = (fuelings: FuelingEntry[]): FuelingEntry[] => {
-    // Sort by odometer to ensure correct chronological order
     const sorted = [...fuelings].sort((a, b) => a.odometer - b.odometer);
-
-    // The consumption for a given fill-up (entry `i`) can only be calculated 
-    // after the next fill-up (entry `i+1`).
     return sorted.map((current, index) => {
         const next = sorted[index + 1];
-
-        // If there's no next entry, we're at the most recent fill-up.
-        // Consumption can't be calculated yet.
-        if (!next) {
-            return { ...current, consumption: null };
-        }
-
-        // Distance traveled on the fuel from the 'current' fill-up.
+        if (!next) return { ...current, consumption: null };
         const distance = next.odometer - current.odometer;
-        // Fuel used was the amount from the 'current' fill-up.
         const liters = current.liters;
-
-        if (liters > 0 && distance > 0) {
-            return { ...current, consumption: distance / liters };
-        }
-
-        // If data is invalid (e.g., negative distance), consumption is null.
+        if (liters > 0 && distance > 0) return { ...current, consumption: distance / liters };
         return { ...current, consumption: null };
     });
 };
 
-
-export const HistoryPage: React.FC<HistoryPageProps> = ({ onNavigateToDashboard }) => {
+export const HistoryPage: React.FC<{ onNavigateToDashboard: () => void }> = ({ onNavigateToDashboard }) => {
     const [fuelings, setFuelings] = useState<FuelingEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
     const [editingFueling, setEditingFueling] = useState<FuelingEntry | null>(null);
 
@@ -55,16 +35,13 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onNavigateToDashboard 
                 setLoading(false);
             }
         });
-
         return () => unsubscribeAuth();
     }, []);
 
     useEffect(() => {
         if (!currentUser) return;
-
         setLoading(true);
         const q = query(collection(db, "fuelings"), where("userId", "==", currentUser.uid));
-        
         const unsubscribeFirestore = onSnapshot(q, (querySnapshot) => {
             const userFuelings: FuelingEntry[] = [];
             querySnapshot.forEach((doc) => {
@@ -73,47 +50,44 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onNavigateToDashboard 
             const recalculated = recalculateConsumptions(userFuelings);
             setFuelings(recalculated);
             setLoading(false);
-        }, (error) => {
-            console.error("Error fetching fuelings:", error);
+        }, (err) => {
+            console.error("Firestore error:", err);
+            setError("Erro de permissão ao carregar histórico.");
             setLoading(false);
         });
-
         return () => unsubscribeFirestore();
     }, [currentUser]);
 
     const handleDeleteFueling = useCallback(async (id: string) => {
         if (window.confirm("Tem certeza que deseja excluir este registro?")) {
-            await deleteDoc(doc(db, "fuelings", id));
-            // onSnapshot will automatically trigger a recalculation for the list
+            try {
+                await deleteDoc(doc(db, "fuelings", id));
+            } catch (err) {
+                console.error("Delete error:", err);
+                alert("Você não tem permissão para excluir este registro.");
+            }
         }
     }, []);
     
     const handleUpdateFueling = useCallback(async (updatedData: EditableFuelingData) => {
-        const originalFueling = fuelings.find(f => f.id === updatedData.id);
-        if (!originalFueling) return;
-        
-        const batch = writeBatch(db);
-        
-        const updatedEntryData = {
-            ...updatedData,
-            liters: updatedData.totalCost / updatedData.pricePerLiter,
-        };
-        // Update the main document with all user-editable fields
-        const docRef = doc(db, "fuelings", updatedData.id);
-        batch.update(docRef, {
-             date: updatedEntryData.date,
-             odometer: updatedEntryData.odometer,
-             pricePerLiter: updatedEntryData.pricePerLiter,
-             totalCost: updatedEntryData.totalCost,
-             station: updatedEntryData.station,
-             liters: updatedEntryData.liters,
-        });
-
-        // The onSnapshot listener will handle recalculating consumptions for the whole list,
-        // which is safer and ensures consistency after an odometer change.
-        await batch.commit();
-        setEditingFueling(null);
-    }, [fuelings]);
+        try {
+            const batch = writeBatch(db);
+            const docRef = doc(db, "fuelings", updatedData.id);
+            batch.update(docRef, {
+                 date: updatedData.date,
+                 odometer: updatedData.odometer,
+                 pricePerLiter: updatedData.pricePerLiter,
+                 totalCost: updatedData.totalCost,
+                 station: updatedData.station,
+                 liters: updatedData.totalCost / updatedData.pricePerLiter,
+            });
+            await batch.commit();
+            setEditingFueling(null);
+        } catch (err) {
+            console.error("Update error:", err);
+            alert("Erro ao atualizar: Verifique suas permissões.");
+        }
+    }, []);
     
     const sortedFuelingsForDisplay = useMemo(() => 
         [...fuelings].sort((a, b) => b.odometer - a.odometer),
@@ -129,6 +103,12 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onNavigateToDashboard 
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            {error && (
+                <div className="mb-8 p-4 bg-red-100 border border-red-200 text-red-700 rounded-lg flex items-center gap-3">
+                    <AlertCircle />
+                    <span>{error}</span>
+                </div>
+            )}
             {editingFueling && (
                 <EditFuelingModal 
                     fueling={editingFueling}
@@ -141,18 +121,12 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onNavigateToDashboard 
                     }
                 />
             )}
-
             <div className="mb-8 flex items-center gap-4">
-                 <button 
-                    onClick={onNavigateToDashboard} 
-                    className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 dark:hover:text-cyan-400 transition-colors p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700"
-                    aria-label="Voltar para o dashboard"
-                >
+                 <button onClick={onNavigateToDashboard} className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
                     <ArrowLeft size={24} />
                 </button>
                 <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Histórico Completo</h1>
             </div>
-
             <FuelingHistory fuelings={sortedFuelingsForDisplay} onDeleteFueling={handleDeleteFueling} onEditFueling={setEditingFueling} />
         </div>
     );
